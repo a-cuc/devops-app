@@ -11,7 +11,8 @@ permissions:
 
 env:
   AWS_REGION: us-east-1
-  ECR_REPOSITORY: test/devops-app
+  ECR_BACKEND_REPOSITORY: test/devops-app-backend
+  ECR_FRONTEND_REPOSITORY: test/devops-app-frontend
 
 jobs:
   build-and-push:
@@ -45,8 +46,8 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ steps.meta.outputs.sha_short }}
         run: |
-          echo "backend_image=$ECR_REGISTRY/$ECR_REPOSITORY:backend-$IMAGE_TAG" >> "$GITHUB_OUTPUT"
-          echo "frontend_image=$ECR_REGISTRY/$ECR_REPOSITORY:frontend-$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          echo "backend_image=$ECR_REGISTRY/$ECR_BACKEND_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          echo "frontend_image=$ECR_REGISTRY/$ECR_FRONTEND_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
 
       - name: Build and push backend image
         env:
@@ -56,11 +57,11 @@ jobs:
             -f backend/Dockerfile \
             --target prod \
             -t "$BACKEND_IMAGE" \
-            -t "${BACKEND_IMAGE%-*}-latest" \
+            -t "${BACKEND_IMAGE%:*}:latest" \
             backend
 
           docker push "$BACKEND_IMAGE"
-          docker push "${BACKEND_IMAGE%-*}-latest"
+          docker push "${BACKEND_IMAGE%:*}:latest"
 
       - name: Build and push frontend image
         env:
@@ -70,11 +71,11 @@ jobs:
             -f frontend/Dockerfile \
             --target prod \
             -t "$FRONTEND_IMAGE" \
-            -t "${FRONTEND_IMAGE%-*}-latest" \
+            -t "${FRONTEND_IMAGE%:*}:latest" \
             frontend
 
           docker push "$FRONTEND_IMAGE"
-          docker push "${FRONTEND_IMAGE%-*}-latest"
+          docker push "${FRONTEND_IMAGE%:*}:latest"
 
   deploy-ecs:
     runs-on: ubuntu-latest
