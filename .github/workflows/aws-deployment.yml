@@ -102,16 +102,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          echo "[DEBUG] AWS region: $AWS_REGION"
-          aws sts get-caller-identity
-
           SERVICE_DESC=$(aws ecs describe-services \
             --cluster "$ECS_CLUSTER" \
             --services "$ECS_BACKEND_SERVICE" \
             --output json)
 
-          SERVICE_COUNT=$(echo "$SERVICE_DESC" | jq '.services | length')
-          SERVICE_FAILURES=$(echo "$SERVICE_DESC" | jq -r '.failures[]? | "\(.arn) :: \(.reason)"')
           TASK_DEF_ARN=$(echo "$SERVICE_DESC" | jq -r '
             .services[0] as $svc
             | [
@@ -125,31 +120,8 @@ jobs:
             | .[0] // "None"
           ')
 
-          echo "[DEBUG] Backend service: $ECS_BACKEND_SERVICE"
-          echo "[DEBUG] Backend services found: $SERVICE_COUNT"
-          if [ -n "$SERVICE_FAILURES" ]; then
-            echo "[DEBUG] Backend service lookup failures:"
-            echo "$SERVICE_FAILURES"
-          fi
-          echo "[DEBUG] Backend task definition ARN: $TASK_DEF_ARN"
           if [ -z "$TASK_DEF_ARN" ] || [ "$TASK_DEF_ARN" = "None" ]; then
-            echo "[ERROR] Could not resolve backend task definition from service '$ECS_BACKEND_SERVICE' in cluster '$ECS_CLUSTER'."
-            echo "[DEBUG] Backend service payload snapshot:"
-            echo "$SERVICE_DESC" | jq '.services[0] // {} | {
-              serviceArn,
-              serviceName,
-              clusterArn,
-              status,
-              launchType,
-              schedulingStrategy,
-              deploymentController,
-              desiredCount,
-              runningCount,
-              pendingCount,
-              taskDefinition,
-              deployments: ((.deployments // []) | map({id, status, rolloutState, taskDefinition, desiredCount, runningCount, pendingCount})),
-              taskSets: ((.taskSets // []) | map({id, status, taskDefinition, computedDesiredCount, runningCount, pendingCount}))
-            }'
+            echo "Could not resolve backend task definition from service '$ECS_BACKEND_SERVICE' in cluster '$ECS_CLUSTER'."
             exit 1
           fi
 
@@ -173,9 +145,7 @@ jobs:
           ' taskdef.json > taskdef-updated.json
 
           if ! jq -e --arg NAME "$ECS_BACKEND_CONTAINER_NAME" '.containerDefinitions[] | select(.name == $NAME)' taskdef-updated.json > /dev/null; then
-            echo "[ERROR] Backend container name '$ECS_BACKEND_CONTAINER_NAME' not found in task definition."
-            echo "[DEBUG] Available backend container names:"
-            jq -r '.containerDefinitions[].name' taskdef-updated.json
+            echo "Backend container name '$ECS_BACKEND_CONTAINER_NAME' not found in task definition."
             exit 1
           fi
 
@@ -202,16 +172,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          echo "[DEBUG] AWS region: $AWS_REGION"
-          aws sts get-caller-identity
-
           SERVICE_DESC=$(aws ecs describe-services \
             --cluster "$ECS_CLUSTER" \
             --services "$ECS_FRONTEND_SERVICE" \
             --output json)
 
-          SERVICE_COUNT=$(echo "$SERVICE_DESC" | jq '.services | length')
-          SERVICE_FAILURES=$(echo "$SERVICE_DESC" | jq -r '.failures[]? | "\(.arn) :: \(.reason)"')
           TASK_DEF_ARN=$(echo "$SERVICE_DESC" | jq -r '
             .services[0] as $svc
             | [
@@ -225,31 +190,8 @@ jobs:
             | .[0] // "None"
           ')
 
-          echo "[DEBUG] Frontend service: $ECS_FRONTEND_SERVICE"
-          echo "[DEBUG] Frontend services found: $SERVICE_COUNT"
-          if [ -n "$SERVICE_FAILURES" ]; then
-            echo "[DEBUG] Frontend service lookup failures:"
-            echo "$SERVICE_FAILURES"
-          fi
-          echo "[DEBUG] Frontend task definition ARN: $TASK_DEF_ARN"
           if [ -z "$TASK_DEF_ARN" ] || [ "$TASK_DEF_ARN" = "None" ]; then
-            echo "[ERROR] Could not resolve frontend task definition from service '$ECS_FRONTEND_SERVICE' in cluster '$ECS_CLUSTER'."
-            echo "[DEBUG] Frontend service payload snapshot:"
-            echo "$SERVICE_DESC" | jq '.services[0] // {} | {
-              serviceArn,
-              serviceName,
-              clusterArn,
-              status,
-              launchType,
-              schedulingStrategy,
-              deploymentController,
-              desiredCount,
-              runningCount,
-              pendingCount,
-              taskDefinition,
-              deployments: ((.deployments // []) | map({id, status, rolloutState, taskDefinition, desiredCount, runningCount, pendingCount})),
-              taskSets: ((.taskSets // []) | map({id, status, taskDefinition, computedDesiredCount, runningCount, pendingCount}))
-            }'
+            echo "Could not resolve frontend task definition from service '$ECS_FRONTEND_SERVICE' in cluster '$ECS_CLUSTER'."
             exit 1
           fi
 
@@ -273,9 +215,7 @@ jobs:
           ' taskdef.json > taskdef-updated.json
 
           if ! jq -e --arg NAME "$ECS_FRONTEND_CONTAINER_NAME" '.containerDefinitions[] | select(.name == $NAME)' taskdef-updated.json > /dev/null; then
-            echo "[ERROR] Frontend container name '$ECS_FRONTEND_CONTAINER_NAME' not found in task definition."
-            echo "[DEBUG] Available frontend container names:"
-            jq -r '.containerDefinitions[].name' taskdef-updated.json
+            echo "Frontend container name '$ECS_FRONTEND_CONTAINER_NAME' not found in task definition."
             exit 1
           fi
 
