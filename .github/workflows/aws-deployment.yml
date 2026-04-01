@@ -112,7 +112,18 @@ jobs:
 
           SERVICE_COUNT=$(echo "$SERVICE_DESC" | jq '.services | length')
           SERVICE_FAILURES=$(echo "$SERVICE_DESC" | jq -r '.failures[]? | "\(.arn) :: \(.reason)"')
-          TASK_DEF_ARN=$(echo "$SERVICE_DESC" | jq -r '.services[0].taskDefinition // "None"')
+          TASK_DEF_ARN=$(echo "$SERVICE_DESC" | jq -r '
+            .services[0] as $svc
+            | [
+                $svc.taskDefinition,
+                ($svc.deployments[]? | select(.status == "PRIMARY") | .taskDefinition),
+                ($svc.deployments[]? | .taskDefinition),
+                ($svc.taskSets[]? | select(.status == "PRIMARY") | .taskDefinition),
+                ($svc.taskSets[]? | .taskDefinition)
+              ]
+            | map(select(. != null and . != ""))
+            | .[0] // "None"
+          ')
 
           echo "[DEBUG] Backend service: $ECS_BACKEND_SERVICE"
           echo "[DEBUG] Backend services found: $SERVICE_COUNT"
@@ -135,7 +146,9 @@ jobs:
               desiredCount,
               runningCount,
               pendingCount,
-              taskDefinition
+              taskDefinition,
+              deployments: ((.deployments // []) | map({id, status, rolloutState, taskDefinition, desiredCount, runningCount, pendingCount})),
+              taskSets: ((.taskSets // []) | map({id, status, taskDefinition, computedDesiredCount, runningCount, pendingCount}))
             }'
             exit 1
           fi
@@ -199,7 +212,18 @@ jobs:
 
           SERVICE_COUNT=$(echo "$SERVICE_DESC" | jq '.services | length')
           SERVICE_FAILURES=$(echo "$SERVICE_DESC" | jq -r '.failures[]? | "\(.arn) :: \(.reason)"')
-          TASK_DEF_ARN=$(echo "$SERVICE_DESC" | jq -r '.services[0].taskDefinition // "None"')
+          TASK_DEF_ARN=$(echo "$SERVICE_DESC" | jq -r '
+            .services[0] as $svc
+            | [
+                $svc.taskDefinition,
+                ($svc.deployments[]? | select(.status == "PRIMARY") | .taskDefinition),
+                ($svc.deployments[]? | .taskDefinition),
+                ($svc.taskSets[]? | select(.status == "PRIMARY") | .taskDefinition),
+                ($svc.taskSets[]? | .taskDefinition)
+              ]
+            | map(select(. != null and . != ""))
+            | .[0] // "None"
+          ')
 
           echo "[DEBUG] Frontend service: $ECS_FRONTEND_SERVICE"
           echo "[DEBUG] Frontend services found: $SERVICE_COUNT"
@@ -222,7 +246,9 @@ jobs:
               desiredCount,
               runningCount,
               pendingCount,
-              taskDefinition
+              taskDefinition,
+              deployments: ((.deployments // []) | map({id, status, rolloutState, taskDefinition, desiredCount, runningCount, pendingCount})),
+              taskSets: ((.taskSets // []) | map({id, status, taskDefinition, computedDesiredCount, runningCount, pendingCount}))
             }'
             exit 1
           fi
