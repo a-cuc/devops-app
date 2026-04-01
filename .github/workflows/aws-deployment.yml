@@ -14,9 +14,9 @@ env:
   ECR_BACKEND_REPOSITORY: test/devops-app-backend
   ECR_FRONTEND_REPOSITORY: test/devops-app-frontend
   ECS_CLUSTER: devops-app-test-2
-  ECS_BACKEND_SERVICE: devops-app-backend-3c12
+  ECS_BACKEND_SERVICE: devops-app-test-2-devops-app-backend-3c12
   ECS_BACKEND_CONTAINER_NAME: Main
-  ECS_FRONTEND_SERVICE: devops-app-frontend-de39
+  ECS_FRONTEND_SERVICE: devops-app-test-2-devops-app-frontend-de39
   ECS_FRONTEND_CONTAINER_NAME: Main
 
 jobs:
