@@ -14,9 +14,9 @@ env:
   ECR_BACKEND_REPOSITORY: test/devops-app-backend
   ECR_FRONTEND_REPOSITORY: test/devops-app-frontend
   ECS_CLUSTER: devops-app-test-2
-  ECS_BACKEND_SERVICE: devops-app-test-2-devops-app-backend-3c12
+  ECS_BACKEND_SERVICE: devops-app-backend-3c12
   ECS_BACKEND_CONTAINER_NAME: Main
-  ECS_FRONTEND_SERVICE: devops-app-test-2-devops-app-frontend-de39
+  ECS_FRONTEND_SERVICE: devops-app-frontend-de39
   ECS_FRONTEND_CONTAINER_NAME: Main
 
 jobs:
@@ -102,13 +102,24 @@ jobs:
         run: |
           set -euo pipefail
 
-          TASK_DEF_ARN=$(aws ecs describe-services \
+          echo "[DEBUG] AWS region: $AWS_REGION"
+          aws sts get-caller-identity
+
+          SERVICE_DESC=$(aws ecs describe-services \
             --cluster "$ECS_CLUSTER" \
             --services "$ECS_BACKEND_SERVICE" \
-            --query "services[0].taskDefinition" \
-            --output text)
+            --output json)
+
+          SERVICE_COUNT=$(echo "$SERVICE_DESC" | jq '.services | length')
+          SERVICE_FAILURES=$(echo "$SERVICE_DESC" | jq -r '.failures[]? | "\(.arn) :: \(.reason)"')
+          TASK_DEF_ARN=$(echo "$SERVICE_DESC" | jq -r '.services[0].taskDefinition // "None"')
 
           echo "[DEBUG] Backend service: $ECS_BACKEND_SERVICE"
+          echo "[DEBUG] Backend services found: $SERVICE_COUNT"
+          if [ -n "$SERVICE_FAILURES" ]; then
+            echo "[DEBUG] Backend service lookup failures:"
+            echo "$SERVICE_FAILURES"
+          fi
           echo "[DEBUG] Backend task definition ARN: $TASK_DEF_ARN"
           if [ -z "$TASK_DEF_ARN" ] || [ "$TASK_DEF_ARN" = "None" ]; then
             echo "[ERROR] Could not resolve backend task definition from service '$ECS_BACKEND_SERVICE' in cluster '$ECS_CLUSTER'."
@@ -134,6 +145,13 @@ jobs:
             )
           ' taskdef.json > taskdef-updated.json
 
+          if ! jq -e --arg NAME "$ECS_BACKEND_CONTAINER_NAME" '.containerDefinitions[] | select(.name == $NAME)' taskdef-updated.json > /dev/null; then
+            echo "[ERROR] Backend container name '$ECS_BACKEND_CONTAINER_NAME' not found in task definition."
+            echo "[DEBUG] Available backend container names:"
+            jq -r '.containerDefinitions[].name' taskdef-updated.json
+            exit 1
+          fi
+
           NEW_TASK_DEF_ARN=$(aws ecs register-task-definition \
             --cli-input-json file://taskdef-updated.json \
             --query "taskDefinition.taskDefinitionArn" \
@@ -157,13 +175,24 @@ jobs:
         run: |
           set -euo pipefail
 
-          TASK_DEF_ARN=$(aws ecs describe-services \
+          echo "[DEBUG] AWS region: $AWS_REGION"
+          aws sts get-caller-identity
+
+          SERVICE_DESC=$(aws ecs describe-services \
             --cluster "$ECS_CLUSTER" \
             --services "$ECS_FRONTEND_SERVICE" \
-            --query "services[0].taskDefinition" \
-            --output text)
+            --output json)
+
+          SERVICE_COUNT=$(echo "$SERVICE_DESC" | jq '.services | length')
+          SERVICE_FAILURES=$(echo "$SERVICE_DESC" | jq -r '.failures[]? | "\(.arn) :: \(.reason)"')
+          TASK_DEF_ARN=$(echo "$SERVICE_DESC" | jq -r '.services[0].taskDefinition // "None"')
 
           echo "[DEBUG] Frontend service: $ECS_FRONTEND_SERVICE"
+          echo "[DEBUG] Frontend services found: $SERVICE_COUNT"
+          if [ -n "$SERVICE_FAILURES" ]; then
+            echo "[DEBUG] Frontend service lookup failures:"
+            echo "$SERVICE_FAILURES"
+          fi
           echo "[DEBUG] Frontend task definition ARN: $TASK_DEF_ARN"
           if [ -z "$TASK_DEF_ARN" ] || [ "$TASK_DEF_ARN" = "None" ]; then
             echo "[ERROR] Could not resolve frontend task definition from service '$ECS_FRONTEND_SERVICE' in cluster '$ECS_CLUSTER'."
@@ -188,6 +217,13 @@ jobs:
               if .name == $NAME then .image = $IMAGE else . end
             )
           ' taskdef.json > taskdef-updated.json
+
+          if ! jq -e --arg NAME "$ECS_FRONTEND_CONTAINER_NAME" '.containerDefinitions[] | select(.name == $NAME)' taskdef-updated.json > /dev/null; then
+            echo "[ERROR] Frontend container name '$ECS_FRONTEND_CONTAINER_NAME' not found in task definition."
+            echo "[DEBUG] Available frontend container names:"
+            jq -r '.containerDefinitions[].name' taskdef-updated.json
+            exit 1
+          fi
 
           NEW_TASK_DEF_ARN=$(aws ecs register-task-definition \
             --cli-input-json file://taskdef-updated.json \
