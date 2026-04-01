@@ -123,6 +123,20 @@ jobs:
           echo "[DEBUG] Backend task definition ARN: $TASK_DEF_ARN"
           if [ -z "$TASK_DEF_ARN" ] || [ "$TASK_DEF_ARN" = "None" ]; then
             echo "[ERROR] Could not resolve backend task definition from service '$ECS_BACKEND_SERVICE' in cluster '$ECS_CLUSTER'."
+            echo "[DEBUG] Backend service payload snapshot:"
+            echo "$SERVICE_DESC" | jq '.services[0] // {} | {
+              serviceArn,
+              serviceName,
+              clusterArn,
+              status,
+              launchType,
+              schedulingStrategy,
+              deploymentController,
+              desiredCount,
+              runningCount,
+              pendingCount,
+              taskDefinition
+            }'
             exit 1
           fi
 
@@ -196,6 +210,20 @@ jobs:
           echo "[DEBUG] Frontend task definition ARN: $TASK_DEF_ARN"
           if [ -z "$TASK_DEF_ARN" ] || [ "$TASK_DEF_ARN" = "None" ]; then
             echo "[ERROR] Could not resolve frontend task definition from service '$ECS_FRONTEND_SERVICE' in cluster '$ECS_CLUSTER'."
+            echo "[DEBUG] Frontend service payload snapshot:"
+            echo "$SERVICE_DESC" | jq '.services[0] // {} | {
+              serviceArn,
+              serviceName,
+              clusterArn,
+              status,
+              launchType,
+              schedulingStrategy,
+              deploymentController,
+              desiredCount,
+              runningCount,
+              pendingCount,
+              taskDefinition
+            }'
             exit 1
           fi
 
