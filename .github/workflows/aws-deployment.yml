@@ -13,6 +13,11 @@ env:
   AWS_REGION: us-east-1
   ECR_BACKEND_REPOSITORY: test/devops-app-backend
   ECR_FRONTEND_REPOSITORY: test/devops-app-frontend
+  ECS_CLUSTER: devops-app-test-2
+  ECS_BACKEND_SERVICE: devops-app-backend-3c12
+  ECS_BACKEND_CONTAINER_NAME: Main
+  ECS_FRONTEND_SERVICE: devops-app-frontend-de39
+  ECS_FRONTEND_CONTAINER_NAME: Main
 
 jobs:
   build-and-push:
@@ -90,9 +95,9 @@ jobs:
 
       - name: Deploy backend service
         env:
-          ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
-          ECS_BACKEND_SERVICE: ${{ secrets.ECS_BACKEND_SERVICE }}
-          ECS_BACKEND_CONTAINER_NAME: ${{ secrets.ECS_BACKEND_CONTAINER_NAME }}
+          ECS_CLUSTER: ${{ env.ECS_CLUSTER }}
+          ECS_BACKEND_SERVICE: ${{ env.ECS_BACKEND_SERVICE }}
+          ECS_BACKEND_CONTAINER_NAME: ${{ env.ECS_BACKEND_CONTAINER_NAME }}
           BACKEND_IMAGE: ${{ needs.build-and-push.outputs.backend_image }}
         run: |
           set -euo pipefail
@@ -145,9 +150,9 @@ jobs:
 
       - name: Deploy frontend service
         env:
-          ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
-          ECS_FRONTEND_SERVICE: ${{ secrets.ECS_FRONTEND_SERVICE }}
-          ECS_FRONTEND_CONTAINER_NAME: ${{ secrets.ECS_FRONTEND_CONTAINER_NAME }}
+          ECS_CLUSTER: ${{ env.ECS_CLUSTER }}
+          ECS_FRONTEND_SERVICE: ${{ env.ECS_FRONTEND_SERVICE }}
+          ECS_FRONTEND_CONTAINER_NAME: ${{ env.ECS_FRONTEND_CONTAINER_NAME }}
           FRONTEND_IMAGE: ${{ needs.build-and-push.outputs.frontend_image }}
         run: |
           set -euo pipefail
